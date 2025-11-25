@@ -4,13 +4,36 @@ A minimal autograd engine in Rust, inspired by [Karpathy's micrograd](https://gi
 
 ## Architecture
 
-Uses the **Arena pattern** to manage the computation graph. All variables are stored in a central `Context`, and operations return indices (`VariableIdx`) instead of owned values. This avoids Rust's ownership complexity with graph structures (no `Rc<RefCell<...>>` needed).
+Uses the **Arena pattern** to manage the computation graph. All variables are stored in a central `Context`, and operations return indices (`VariableIdx`) instead of owned values. This avoids Rust's ownership complexity with graph structures (no `Rc<RefCell<...>>` needed). Adds some syntactic sugar on top of it, see below.
 
 ## Usage
 
-### Direct Arena Syntax
+### Scoped API
+
+Uses the **Scoped API pattern** (like `std::thread::scope`) to hide context management:
 
 ```rust
+use backprop_rs::syntax::graph;
+
+graph(|var| {
+    let a = var(3.0);
+    let b = var(2.0);
+
+    let c = (a * a + b).relu();  // c = relu(a² + b)
+
+    c.backprop();
+
+    assert_eq!(a.grad(), Some(6.0));  // dc/da = 2a = 6
+});
+```
+
+### Direct Arena Syntax
+
+For a better insight on what's going on, use the arena directly:
+
+```rust
+use backprop_rs::engine::Context;
+
 let mut ctx = Context::new();
 
 let a = ctx.var(3.0);
@@ -25,28 +48,11 @@ assert_eq!(ctx.grad(a), Some(6.0));  // dc/da = 2a = 6
 assert_eq!(ctx.grad(b), Some(1.0));  // dc/db = 1
 ```
 
-### Syntactic Sugar
-
-Ergonomic wrapper with operator overloading (`+`, `-`, `*`, `/`):
-
-```rust
-let ctx = RefCell::new(Context::new());
-
-let a = Var::new(&ctx, 3.0);
-let b = Var::new(&ctx, 2.0);
-
-let c = (a * a + b).relu();  // c = relu(a² + b)
-
-c.backprop();
-
-assert_eq!(a.grad(), Some(6.0));
-```
-
-Both map to the same underlying arena.
+Both APIs map to the same underlying arena.
 
 ## Supported Operations
 
-- `add`, `sub`, `mul`, `div`
+- `+`, `-`, `*`, `/` (via operator overloading in scoped API)
 - `pow`, `relu`, `neg`
 
 Run tests with `cargo test`.
