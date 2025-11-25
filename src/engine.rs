@@ -8,6 +8,12 @@ pub struct Context {
     vars: Vec<Variable>,
 }
 
+impl Default for Context {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Context {
     pub fn new() -> Self {
         Self { vars: Vec::new() }
