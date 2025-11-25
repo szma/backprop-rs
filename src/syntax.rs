@@ -81,3 +81,13 @@ impl<'a> Neg for Var<'a> {
         Var { idx, ctx: self.ctx }
     }
 }
+
+/// Run a computation with a hidden context.
+/// The closure receives a `var` function to create variables.
+pub fn graph<F, R>(f: F) -> R
+where
+    F: for<'a> FnOnce(&dyn Fn(f64) -> Var<'a>) -> R,
+{
+    let ctx = RefCell::new(Context::new());
+    f(&|data| Var::new(&ctx, data))
+}

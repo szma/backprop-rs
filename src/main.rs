@@ -1,9 +1,7 @@
 #![allow(dead_code)]
 
-use std::cell::RefCell;
-
 use backprop_rs::engine::Context;
-use backprop_rs::syntax::Var;
+use backprop_rs::syntax::graph;
 
 #[cfg(test)]
 mod tests;
@@ -21,15 +19,16 @@ fn main() {
     ctx.backprop(d);
     dbg!(ctx.grad(a));
 
-    // Syntactic sugar variant, maps to arena in the background
-    let ctx = RefCell::new(Context::new());
-    let a = Var::new(&ctx, 1.0);
-    let b = Var::new(&ctx, 2.0);
+    // Syntactic sugar variant, maps to arena in the background: Scoped API
+    graph(|var| {
+        let a = var(1.0);
+        let b = var(2.0);
 
-    let c = a + b;
-    let d = (c * c).relu() + c.pow(2.0);
+        let c = a + b;
+        let d = (c * c).relu() + c.pow(2.0);
 
-    d.backprop();
+        d.backprop();
 
-    dbg!(a.grad());
+        dbg!(a.grad());
+    });
 }
