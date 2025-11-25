@@ -156,17 +156,9 @@ impl Variable {
     }
 }
 
+#[cfg(test)]
+mod tests;
+
 fn main() {
-    // Test: b = a*a + a, where a=3
-    // b = 9 + 3 = 12
-    // db/da = 2a + 1 = 7
-    let mut ctx = Context::new();
-    let a = ctx.var(3.0);
-    let a_sq = ctx.mul(a, a); // a*a = 9
-    let b = ctx.add(a_sq, a); // a*a + a = 12
-
-    ctx.backprop(b);
-
-    dbg!(&ctx.vars[a], &ctx.vars[a_sq], &ctx.vars[b]);
-    // Expected: a.grad = 7 (2*3 + 1)
+    println!("Run `cargo test` to run the tests");
 }
