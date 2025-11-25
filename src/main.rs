@@ -1,5 +1,5 @@
+#![allow(dead_code)]
 use std::collections::HashSet;
-
 type VariableIdx = usize;
 
 struct Context {
@@ -18,7 +18,9 @@ impl Context {
     }
 
     // Helper to construct and return new variable
-    fn push_var(&mut self, data: f64, children: Vec<VariableIdx>, op: Op) -> VariableIdx {
+    fn push_var(&mut self, children: Vec<VariableIdx>, op: Op) -> VariableIdx {
+        let children_data: Vec<f64> = children.iter().map(|&c| self.vars[c].data).collect();
+        let data = op.forward(&children_data);
         self.vars.push(Variable {
             data,
             grad: None,
@@ -29,24 +31,19 @@ impl Context {
     }
 
     pub fn add(&mut self, a: VariableIdx, b: VariableIdx) -> VariableIdx {
-        let data = self.vars[a].data + self.vars[b].data;
-        self.push_var(data, vec![a, b], Op::Add)
+        self.push_var(vec![a, b], Op::Add)
     }
 
     pub fn mul(&mut self, a: VariableIdx, b: VariableIdx) -> VariableIdx {
-        let data = self.vars[a].data * self.vars[b].data;
-        self.push_var(data, vec![a, b], Op::Mul)
+        self.push_var(vec![a, b], Op::Mul)
     }
 
     pub fn pow(&mut self, a: VariableIdx, exp: f64) -> VariableIdx {
-        let data = self.vars[a].data.powf(exp);
-        self.push_var(data, vec![a], Op::Pow(exp))
+        self.push_var(vec![a], Op::Pow(exp))
     }
 
     pub fn relu(&mut self, a: VariableIdx) -> VariableIdx {
-        let adata = self.vars[a].data;
-        let data = if adata > 0.0 { adata } else { 0.0 };
-        self.push_var(data, vec![a], Op::ReLU)
+        self.push_var(vec![a], Op::ReLU)
     }
 
     pub fn neg(&mut self, a: VariableIdx) -> VariableIdx {
@@ -70,36 +67,13 @@ impl Context {
     }
 
     fn backward(&mut self, a: VariableIdx) {
-        let Variable {
-            data,
-            grad,
-            children,
-            op,
-        } = self.vars[a].clone();
+        let var = &self.vars[a];
+        let children_data: Vec<f64> = var.children.iter().map(|&c| self.vars[c].data).collect();
+        let grads = var.op.backward(&children_data, var.data, var.grad.unwrap_or(0.0));
+        let children = var.children.clone();
 
-        let grad = grad.unwrap_or(0.0);
-
-        match op {
-            Op::Add => {
-                self.add_grad(children[0], grad);
-                self.add_grad(children[1], grad);
-            }
-            Op::Mul => {
-                let data0 = self.vars[children[0]].data;
-                let data1 = self.vars[children[1]].data;
-
-                self.add_grad(children[0], data1 * grad);
-                self.add_grad(children[1], data0 * grad);
-            }
-            Op::Pow(exp) => {
-                // d/dx (x^n) = n * x^(n-1)
-                let base_data = self.vars[children[0]].data;
-                self.add_grad(children[0], exp * base_data.powf(exp - 1.0) * grad);
-            }
-            Op::ReLU => {
-                self.add_grad(children[0], if data > 0.0 { grad } else { 0.0 });
-            }
-            Op::Value => {}
+        for (child, grad) in children.iter().zip(grads) {
+            self.add_grad(*child, grad);
         }
     }
 
@@ -140,6 +114,27 @@ enum Op {
     ReLU,
 }
 
+impl Op {
+    fn forward(&self, children_data: &[f64])  -> f64 {
+        match self {
+            Op::Add => children_data[0] + children_data[1],
+            Op::Mul => children_data[0] * children_data[1],
+            Op::Pow(exp) => children_data[0].powf(*exp),
+            Op::ReLU => if children_data[0] > 0.0 { children_data[0] } else { 0.0 },
+            Op::Value => unimplemented!(),
+        }
+    }
+    fn backward(&self, children_data: &[f64], out_data: f64, out_grad: f64) -> Vec<f64> {
+        match self {
+            Op::Add => vec![out_grad, out_grad],
+            Op::Mul => vec![children_data[1] * out_grad, children_data[0] * out_grad],
+            Op::Pow(exp) => vec![exp * children_data[0].powf(exp - 1.0) * out_grad],
+            Op::ReLU => vec![if out_data > 0.0 { out_grad } else { 0.0 }],
+            Op::Value => vec![],
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Variable {
     data: f64,
@@ -167,8 +162,8 @@ fn main() {
     // db/da = 2a + 1 = 7
     let mut ctx = Context::new();
     let a = ctx.var(3.0);
-    let a_sq = ctx.mul(a, a);  // a*a = 9
-    let b = ctx.add(a_sq, a);  // a*a + a = 12
+    let a_sq = ctx.mul(a, a); // a*a = 9
+    let b = ctx.add(a_sq, a); // a*a + a = 12
 
     ctx.backprop(b);
 
