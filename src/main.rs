@@ -69,7 +69,9 @@ impl Context {
     fn backward(&mut self, a: VariableIdx) {
         let var = &self.vars[a];
         let children_data: Vec<f64> = var.children.iter().map(|&c| self.vars[c].data).collect();
-        let grads = var.op.backward(&children_data, var.data, var.grad.unwrap_or(0.0));
+        let grads = var
+            .op
+            .backward(&children_data, var.data, var.grad.unwrap_or(0.0));
         let children = var.children.clone();
 
         for (child, grad) in children.iter().zip(grads) {
@@ -115,12 +117,18 @@ enum Op {
 }
 
 impl Op {
-    fn forward(&self, children_data: &[f64])  -> f64 {
+    fn forward(&self, children_data: &[f64]) -> f64 {
         match self {
             Op::Add => children_data[0] + children_data[1],
             Op::Mul => children_data[0] * children_data[1],
             Op::Pow(exp) => children_data[0].powf(*exp),
-            Op::ReLU => if children_data[0] > 0.0 { children_data[0] } else { 0.0 },
+            Op::ReLU => {
+                if children_data[0] > 0.0 {
+                    children_data[0]
+                } else {
+                    0.0
+                }
+            }
             Op::Value => unimplemented!(),
         }
     }

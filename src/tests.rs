@@ -93,7 +93,7 @@ fn test_div() {
     assert_eq!(ctx.vars[c].data, 3.0);
 
     ctx.backprop(c);
-    assert_eq!(grad(&ctx, a), 0.5);  // dc/da = 1/b = 0.5
+    assert_eq!(grad(&ctx, a), 0.5); // dc/da = 1/b = 0.5
     assert_eq!(grad(&ctx, b), -1.5); // dc/db = -a/b^2 = -6/4 = -1.5
 }
 
