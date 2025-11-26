@@ -17,6 +17,8 @@ fn xor() {
     let params = mlp.parameters();
     let checkpoint = g.len();
 
+    let lr = 0.01;
+
     for epoch in 0..500 {
         let mut total_loss = g.variable(0.0);
 
@@ -25,8 +27,7 @@ fn xor() {
             let pred = mlp.forward(&inputs);
             let y_target = g.variable(target);
 
-            let diff = pred[0] - y_target;
-            let loss = diff * diff;
+            let loss = (pred[0]- y_target).pow(2.);
             total_loss = total_loss + loss;
         }
 
@@ -34,7 +35,7 @@ fn xor() {
 
         for &p in &params {
             let grad = p.grad().unwrap_or(0.0);
-            p.set_data(p.data() - 0.01 * grad);
+            p.set_data(p.data() - lr * grad);
         }
 
         if epoch % 100 == 0 {
