@@ -13,8 +13,10 @@ impl Neuron {
 
     pub fn new(ctx: &mut Context, nin: i16, nonlin: bool) -> Self {
         let mut w = Vec::new();
+        // He-Initialisierung: scale = sqrt(2 / fan_in)
+        let scale = (2.0 / nin as f64).sqrt();
         for _ in 0..nin {
-            w.push(ctx.var(rand::random::<f64>() * 2. - 1.));
+            w.push(ctx.var((rand::random::<f64>() * 2. - 1.) * scale));
         }
         Self { w, b: ctx.var(0.0), nonlin }
     }

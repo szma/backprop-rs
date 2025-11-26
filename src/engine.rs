@@ -56,6 +56,14 @@ impl Context {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.vars.len()
+    }
+
+    pub fn truncate(&mut self, len: usize) {
+        self.vars.truncate(len);
+    }
+
     pub fn add(&mut self, a: VariableIdx, b: VariableIdx) -> VariableIdx {
         self.push_var(vec![a, b], Op::Add)
     }
