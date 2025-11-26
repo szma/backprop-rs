@@ -46,6 +46,16 @@ impl Context {
         self.vars[a].grad
     }
 
+    pub fn set_data(&mut self, a: VariableIdx, data: f64) {
+        self.vars[a].data = data;
+    }
+
+    pub fn zero_grad(&mut self) {
+        for var in &mut self.vars {
+            var.grad = None;
+        }
+    }
+
     pub fn add(&mut self, a: VariableIdx, b: VariableIdx) -> VariableIdx {
         self.push_var(vec![a, b], Op::Add)
     }

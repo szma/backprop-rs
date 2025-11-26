@@ -1,34 +1,73 @@
 #![allow(dead_code)]
 
 use backprop_rs::engine::Context;
-use backprop_rs::syntax::graph;
+use backprop_rs::nn::MLP;
 
 #[cfg(test)]
 mod tests;
 
 fn main() {
-    // Direct Arena syntax
+    // XOR-Problem: Lerne die XOR-Funktion
+    // Inputs: (0,0) -> 0, (0,1) -> 1, (1,0) -> 1, (1,1) -> 0
+
+    let xs: Vec<[f64; 2]> = vec![
+        [0.0, 0.0],
+        [0.0, 1.0],
+        [1.0, 0.0],
+        [1.0, 1.0],
+    ];
+    let ys: Vec<f64> = vec![0.0, 1.0, 1.0, 0.0];
+
     let mut ctx = Context::new();
-    let a = ctx.var(1.0);
-    let b = ctx.var(2.0);
-    let c = ctx.add(a, b);
 
-    let d0 = ctx.mul(c, c);
-    let d = ctx.add(d0, c);
+    // MLP: 2 inputs -> 8 hidden -> 8 hidden -> 1 output
+    let mlp = MLP::new(&mut ctx, 2, vec![8, 8, 1]);
+    let params = mlp.parameters();
 
-    ctx.backprop(d);
-    dbg!(ctx.grad(a));
+    let learning_rate = 0.1;
 
-    // Syntactic sugar variant, maps to arena in the background: Scoped API
-    graph(|var| {
-        let a = var(1.0);
-        let b = var(2.0);
+    for epoch in 0..100 {
+        // Forward pass für alle Samples
+        let mut total_loss = ctx.var(0.0);
 
-        let c = a + b;
-        let d = (c * c).relu() + c.pow(2.0);
+        for (x, &target) in xs.iter().zip(ys.iter()) {
+            let x0 = ctx.var(x[0]);
+            let x1 = ctx.var(x[1]);
+            let inputs = vec![x0, x1];
 
-        d.backprop();
+            let pred = mlp.forward(&mut ctx, &inputs);
+            let y_target = ctx.var(target);
 
-        dbg!(a.grad());
-    });
+            // MSE loss: (pred - target)^2
+            let diff = ctx.sub(pred[0], y_target);
+            let loss = ctx.mul(diff, diff);
+            total_loss = ctx.add(total_loss, loss);
+        }
+
+        // Backward pass
+        ctx.backprop(total_loss);
+
+        // Parameter update (SGD)
+        for &p in &params {
+            let grad = ctx.grad(p).unwrap_or(0.0);
+            let new_val = ctx.data(p) - learning_rate * grad;
+            ctx.set_data(p, new_val);
+        }
+
+        if epoch % 10 == 0 {
+            println!("Epoch {}: Loss = {:.4}", epoch, ctx.data(total_loss));
+        }
+
+        // Reset gradients
+        ctx.zero_grad();
+    }
+
+    // Test
+    println!("\nErgebnisse:");
+    for (x, &target) in xs.iter().zip(ys.iter()) {
+        let x0 = ctx.var(x[0]);
+        let x1 = ctx.var(x[1]);
+        let pred = mlp.forward(&mut ctx, &[x0, x1]);
+        println!("  {:?} -> {:.3} (erwartet: {})", x, ctx.data(pred[0]), target);
+    }
 }
