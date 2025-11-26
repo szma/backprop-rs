@@ -28,6 +28,18 @@ impl Graph {
         self.ctx.borrow_mut().zero_grad();
     }
 
+    pub fn len(&self) -> usize {
+        self.ctx.borrow().len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.ctx.borrow().is_empty()
+    }
+
+    pub fn truncate(&self, len: usize) {
+        self.ctx.borrow_mut().truncate(len);
+    }
+
     pub fn neuron(&self, nin: i16, nonlin: bool) -> crate::nn::Neuron<'_> {
         crate::nn::Neuron::new(self, nin, nonlin)
     }

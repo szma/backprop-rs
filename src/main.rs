@@ -20,6 +20,7 @@ fn xor_graph_api() {
     let g = Graph::new();
     let mlp = g.mlp(2, vec![8, 8, 1]);
     let params = mlp.parameters();
+    let checkpoint = g.len();
 
     for epoch in 0..500 {
         let mut total_loss = g.var(0.0);
@@ -47,6 +48,7 @@ fn xor_graph_api() {
         }
 
         g.zero_grad();
+        g.truncate(checkpoint);
     }
 
     println!("\nResults:");
