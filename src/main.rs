@@ -28,7 +28,7 @@ fn mnist() {
     println!("Loaded {} training, {} test images", train.len(), test.len());
 
     let g = Graph::new();
-    let mlp = g.mlp(784, vec![32, 10]);
+    let mlp = g.mlp(784, vec![16, 10]);
     let params = mlp.parameters();
     let checkpoint = g.len();
 
@@ -42,8 +42,9 @@ fn mnist() {
         let mut total_loss = 0.0;
         let mut correct = 0;
 
-        for batch_start in (0..train.len()).step_by(batch_size) {
-            let batch_end = (batch_start + batch_size).min(train.len());
+        let num_samples = 1000; // train.len()
+        for batch_start in (0..num_samples).step_by(batch_size) {
+            let batch_end = (batch_start + batch_size).min(num_samples);
             let mut batch_loss = g.variable(0.0);
 
             for i in batch_start..batch_end {
@@ -85,17 +86,18 @@ fn mnist() {
             g.truncate(checkpoint);
         }
 
-        let accuracy = correct as f64 / train.len() as f64 * 100.0;
+        let accuracy = correct as f64 / num_samples as f64 * 100.0;
         println!(
             "Epoch {}: Loss = {:.4}, Train Accuracy = {:.2}%",
             epoch + 1,
-            total_loss / train.len() as f64,
+            total_loss / num_samples as f64,
             accuracy
         );
 
         // Test accuracy
         let mut test_correct = 0;
-        for i in 0..test.len() {
+        let num_test_samples = 1000;
+        for i in 0..num_test_samples {
             let inputs: Vec<_> = test.images[i].iter().map(|&x| g.variable(x)).collect();
             let logits = mlp.forward(&inputs);
             let pred = logits
@@ -111,7 +113,7 @@ fn mnist() {
         }
         println!(
             "         Test Accuracy = {:.2}%",
-            test_correct as f64 / test.len() as f64 * 100.0
+            test_correct as f64 / num_test_samples as f64 * 100.0
         );
     }
 }
