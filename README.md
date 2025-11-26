@@ -25,6 +25,14 @@ loss.backprop();
 
 ## Supported Operations
 
-`+`, `-`, `*`, `/`, `pow`, `relu`, `neg`
+`+`, `-`, `*`, `/`, `pow`, `relu`, `exp`, `log`, `softmax`, `cross_entropy`
 
-Run `cargo run` to see XOR training.
+## Examples
+
+- **XOR**: Classic non-linear problem (`fn xor()`)
+- **MNIST**: Handwritten digit classification with a simple MLP
+
+```bash
+cd data && ./download.sh            # Download MNIST dataset
+cd .. && cargo run --release        # Train on MNIST (slow!)
+```
