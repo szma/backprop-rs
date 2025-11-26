@@ -1,9 +1,13 @@
 use crate::engine::Context;
-use crate::nn::{Layer, MLP, Neuron};
 use std::{
     cell::RefCell,
     ops::{Add, Div, Mul, Neg, Sub},
 };
+
+/// Trait for creating variables in a computation graph
+pub trait VarFactory<'a> {
+    fn var(&self, data: f64) -> Var<'a>;
+}
 
 pub struct Graph {
     ctx: RefCell<Context>,
@@ -24,16 +28,22 @@ impl Graph {
         self.ctx.borrow_mut().zero_grad();
     }
 
-    pub fn neuron(&self, nin: i16, nonlin: bool) -> Neuron<'_> {
-        Neuron::new(|x| self.var(x), nin, nonlin)
+    pub fn neuron(&self, nin: i16, nonlin: bool) -> crate::nn::Neuron<'_> {
+        crate::nn::Neuron::new(self, nin, nonlin)
     }
 
-    pub fn layer(&self, nin: i16, nout: i16, nonlin: bool) -> Layer<'_> {
-        Layer::new(|x| self.var(x), nin, nout, nonlin)
+    pub fn layer(&self, nin: i16, nout: i16, nonlin: bool) -> crate::nn::Layer<'_> {
+        crate::nn::Layer::new(self, nin, nout, nonlin)
     }
 
-    pub fn mlp(&self, nin: i16, nouts: Vec<i16>) -> MLP<'_> {
-        MLP::new(|x| self.var(x), nin, nouts)
+    pub fn mlp(&self, nin: i16, nouts: Vec<i16>) -> crate::nn::MLP<'_> {
+        crate::nn::MLP::new(self, nin, nouts)
+    }
+}
+
+impl<'a> VarFactory<'a> for &'a Graph {
+    fn var(&self, data: f64) -> Var<'a> {
+        Graph::var(self, data)
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::syntax::Var;
+use crate::syntax::{Var, VarFactory};
 
 pub struct Neuron<'a> {
     w: Vec<Var<'a>>,
@@ -7,15 +7,15 @@ pub struct Neuron<'a> {
 }
 
 impl<'a> Neuron<'a> {
-    pub fn new(var: impl Fn(f64) -> Var<'a>, nin: i16, nonlin: bool) -> Self {
-        // He-Initialisierung: scale = sqrt(2 / fan_in)
+    pub fn new(g: impl VarFactory<'a>, nin: i16, nonlin: bool) -> Self {
+        // He initialization: scale = sqrt(2 / fan_in)
         let scale = (2.0 / nin as f64).sqrt();
         let w = (0..nin)
-            .map(|_| var((rand::random::<f64>() * 2. - 1.) * scale))
+            .map(|_| g.var((rand::random::<f64>() * 2. - 1.) * scale))
             .collect();
         Self {
             w,
-            b: var(0.0),
+            b: g.var(0.0),
             nonlin,
         }
     }
@@ -43,8 +43,8 @@ pub struct Layer<'a> {
 }
 
 impl<'a> Layer<'a> {
-    pub fn new(var: impl Fn(f64) -> Var<'a>, nin: i16, nout: i16, nonlin: bool) -> Self {
-        let neurons = (0..nout).map(|_| Neuron::new(&var, nin, nonlin)).collect();
+    pub fn new(g: impl VarFactory<'a> + Copy, nin: i16, nout: i16, nonlin: bool) -> Self {
+        let neurons = (0..nout).map(|_| Neuron::new(g, nin, nonlin)).collect();
         Self { neurons }
     }
 
@@ -62,15 +62,15 @@ pub struct MLP<'a> {
 }
 
 impl<'a> MLP<'a> {
-    pub fn new(var: impl Fn(f64) -> Var<'a>, nin: i16, nouts: Vec<i16>) -> Self {
+    pub fn new(g: impl VarFactory<'a> + Copy, nin: i16, nouts: Vec<i16>) -> Self {
         let n = nouts.len();
         let mut layers = Vec::new();
 
-        layers.push(Layer::new(&var, nin, nouts[0], n > 1)); // nonlin if not last
+        layers.push(Layer::new(g, nin, nouts[0], n > 1)); // nonlin if not last
 
         for i in 1..n {
             let is_last = i == n - 1;
-            layers.push(Layer::new(&var, nouts[i - 1], nouts[i], !is_last));
+            layers.push(Layer::new(g, nouts[i - 1], nouts[i], !is_last));
         }
 
         Self { layers }
