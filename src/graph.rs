@@ -53,6 +53,24 @@ impl Graph {
         crate::nn::MLP::new(self, nin, nouts)
     }
 
+    pub fn softmax<'a>(&'a self, logits: &[Variable<'a>]) -> Vec<Variable<'a>> {
+        // Numerically stable softmax: subtract max before exp
+        let max_val = logits
+            .iter()
+            .map(|v| v.data())
+            .fold(f64::NEG_INFINITY, f64::max);
+        let max_var = self.variable(max_val);
+
+        let exps: Vec<Variable<'_>> = logits.iter().map(|x| (*x - max_var).exp()).collect();
+        let sum_exp = exps.iter().skip(1).fold(exps[0], |acc, &x| acc + x);
+
+        exps.iter().map(|&e| e / sum_exp).collect()
+    }
+
+    pub fn cross_entropy<'a>(&'a self, probs: &[Variable<'a>], target: usize) -> Variable<'a> {
+        -probs[target].log()
+    }
+
     // Internal arena operations
 
     fn push_var(&self, children: Vec<VariableDataIdx>, op: Op) -> VariableDataIdx {
@@ -98,6 +116,14 @@ impl Graph {
 
     fn relu_op(&self, a: VariableDataIdx) -> VariableDataIdx {
         self.push_var(vec![a], Op::ReLU)
+    }
+
+    fn exp_op(&self, a: VariableDataIdx) -> VariableDataIdx {
+        self.push_var(vec![a], Op::Exp)
+    }
+
+    fn log_op(&self, a: VariableDataIdx) -> VariableDataIdx {
+        self.push_var(vec![a], Op::Log)
     }
 
     fn neg_op(&self, a: VariableDataIdx) -> VariableDataIdx {
@@ -221,6 +247,22 @@ impl<'a> Variable<'a> {
             graph: self.graph,
         }
     }
+
+    pub fn exp(self) -> Self {
+        let idx = self.graph.exp_op(self.idx);
+        Variable {
+            idx,
+            graph: self.graph,
+        }
+    }
+
+    pub fn log(self) -> Self {
+        let idx = self.graph.log_op(self.idx);
+        Variable {
+            idx,
+            graph: self.graph,
+        }
+    }
 }
 
 impl<'a> Add for Variable<'a> {
@@ -288,6 +330,8 @@ enum Op {
     Mul,
     Pow(f64),
     ReLU,
+    Exp,
+    Log,
 }
 
 impl Op {
@@ -303,6 +347,8 @@ impl Op {
                     0.0
                 }
             }
+            Op::Exp => children_data[0].exp(),
+            Op::Log => children_data[0].ln(),
             Op::Value => unimplemented!(),
         }
     }
@@ -313,6 +359,8 @@ impl Op {
             Op::Mul => vec![children_data[1] * out_grad, children_data[0] * out_grad],
             Op::Pow(exp) => vec![exp * children_data[0].powf(exp - 1.0) * out_grad],
             Op::ReLU => vec![if out_data > 0.0 { out_grad } else { 0.0 }],
+            Op::Exp => vec![out_data * out_grad], // d/dx exp(x) = exp(x)
+            Op::Log => vec![out_grad / children_data[0]], // d/dx ln(x) = 1/x
             Op::Value => vec![],
         }
     }
