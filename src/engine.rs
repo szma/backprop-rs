@@ -56,6 +56,10 @@ impl Context {
         }
     }
 
+    pub fn zero_grad_single(&mut self, a: VariableIdx) {
+        self.vars[a].grad = None;
+    }
+
     pub fn len(&self) -> usize {
         self.vars.len()
     }

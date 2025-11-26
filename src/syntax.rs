@@ -1,8 +1,47 @@
 use crate::engine::Context;
+use crate::nn::{Layer, MLP, Neuron};
 use std::{
     cell::RefCell,
     ops::{Add, Div, Mul, Neg, Sub},
 };
+
+pub struct Graph {
+    ctx: RefCell<Context>,
+}
+
+impl Graph {
+    pub fn new() -> Self {
+        Self {
+            ctx: RefCell::new(Context::new()),
+        }
+    }
+
+    pub fn var(&self, data: f64) -> Var<'_> {
+        Var::new(&self.ctx, data)
+    }
+
+    pub fn zero_grad(&self) {
+        self.ctx.borrow_mut().zero_grad();
+    }
+
+    pub fn neuron(&self, nin: i16, nonlin: bool) -> Neuron<'_> {
+        Neuron::new(|x| self.var(x), nin, nonlin)
+    }
+
+    pub fn layer(&self, nin: i16, nout: i16, nonlin: bool) -> Layer<'_> {
+        Layer::new(|x| self.var(x), nin, nout, nonlin)
+    }
+
+    pub fn mlp(&self, nin: i16, nouts: Vec<i16>) -> MLP<'_> {
+        MLP::new(|x| self.var(x), nin, nouts)
+    }
+}
+
+impl Default for Graph {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[derive(Debug, Copy, Clone)]
 pub struct Var<'a> {
@@ -23,11 +62,19 @@ impl<'a> Var<'a> {
     }
 
     pub fn data(self) -> f64 {
-        self.ctx.borrow_mut().data(self.idx)
+        self.ctx.borrow().data(self.idx)
     }
 
     pub fn grad(self) -> Option<f64> {
-        self.ctx.borrow_mut().grad(self.idx)
+        self.ctx.borrow().grad(self.idx)
+    }
+
+    pub fn set_data(self, data: f64) {
+        self.ctx.borrow_mut().set_data(self.idx, data);
+    }
+
+    pub fn zero_grad(self) {
+        self.ctx.borrow_mut().zero_grad_single(self.idx);
     }
 
     pub fn pow(self, exp: f64) -> Self {
@@ -80,14 +127,4 @@ impl<'a> Neg for Var<'a> {
         let idx = self.ctx.borrow_mut().neg(self.idx);
         Var { idx, ctx: self.ctx }
     }
-}
-
-/// Run a computation with a hidden context.
-/// The closure receives a `var` function to create variables.
-pub fn graph<F, R>(f: F) -> R
-where
-    F: for<'a> FnOnce(&dyn Fn(f64) -> Var<'a>) -> R,
-{
-    let ctx = RefCell::new(Context::new());
-    f(&|data| Var::new(&ctx, data))
 }
