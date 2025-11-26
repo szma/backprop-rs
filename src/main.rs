@@ -18,12 +18,12 @@ fn xor() {
     let checkpoint = g.len();
 
     for epoch in 0..500 {
-        let mut total_loss = g.var(0.0);
+        let mut total_loss = g.variable(0.0);
 
         for (x, &target) in xs.iter().zip(ys.iter()) {
-            let inputs = [g.var(x[0]), g.var(x[1])];
+            let inputs = [g.variable(x[0]), g.variable(x[1])];
             let pred = mlp.forward(&inputs);
-            let y_target = g.var(target);
+            let y_target = g.variable(target);
 
             let diff = pred[0] - y_target;
             let loss = diff * diff;
@@ -47,7 +47,7 @@ fn xor() {
 
     println!("\nResults:");
     for (x, &target) in xs.iter().zip(ys.iter()) {
-        let inputs = [g.var(x[0]), g.var(x[1])];
+        let inputs = [g.variable(x[0]), g.variable(x[1])];
         let pred = mlp.forward(&inputs);
         println!("  {:?} -> {:.3} (expected: {})", x, pred[0].data(), target);
     }

@@ -3,8 +3,8 @@ use backprop_rs::graph::Graph;
 #[test]
 fn test_add() {
     let g = Graph::new();
-    let a = g.var(2.0);
-    let b = g.var(3.0);
+    let a = g.variable(2.0);
+    let b = g.variable(3.0);
     let c = a + b;
 
     assert_eq!(c.data(), 5.0);
@@ -17,8 +17,8 @@ fn test_add() {
 #[test]
 fn test_mul() {
     let g = Graph::new();
-    let a = g.var(2.0);
-    let b = g.var(3.0);
+    let a = g.variable(2.0);
+    let b = g.variable(3.0);
     let c = a * b;
 
     assert_eq!(c.data(), 6.0);
@@ -31,7 +31,7 @@ fn test_mul() {
 #[test]
 fn test_pow() {
     let g = Graph::new();
-    let a = g.var(2.0);
+    let a = g.variable(2.0);
     let b = a.pow(3.0); // a^3 = 8
 
     assert_eq!(b.data(), 8.0);
@@ -43,7 +43,7 @@ fn test_pow() {
 #[test]
 fn test_relu_positive() {
     let g = Graph::new();
-    let a = g.var(2.0);
+    let a = g.variable(2.0);
     let b = a.relu();
 
     assert_eq!(b.data(), 2.0);
@@ -55,7 +55,7 @@ fn test_relu_positive() {
 #[test]
 fn test_relu_negative() {
     let g = Graph::new();
-    let a = g.var(-2.0);
+    let a = g.variable(-2.0);
     let b = a.relu();
 
     assert_eq!(b.data(), 0.0);
@@ -67,8 +67,8 @@ fn test_relu_negative() {
 #[test]
 fn test_sub() {
     let g = Graph::new();
-    let a = g.var(5.0);
-    let b = g.var(3.0);
+    let a = g.variable(5.0);
+    let b = g.variable(3.0);
     let c = a - b;
 
     assert_eq!(c.data(), 2.0);
@@ -81,8 +81,8 @@ fn test_sub() {
 #[test]
 fn test_div() {
     let g = Graph::new();
-    let a = g.var(6.0);
-    let b = g.var(2.0);
+    let a = g.variable(6.0);
+    let b = g.variable(2.0);
     let c = a / b; // 6/2 = 3
 
     assert_eq!(c.data(), 3.0);
@@ -96,7 +96,7 @@ fn test_div() {
 fn test_variable_reuse() {
     // b = a*a + a, db/da = 2a + 1
     let g = Graph::new();
-    let a = g.var(3.0);
+    let a = g.variable(3.0);
     let a_sq = a * a;
     let b = a_sq + a;
 
@@ -110,9 +110,9 @@ fn test_variable_reuse() {
 fn test_chain() {
     // d = (a + b) * c
     let g = Graph::new();
-    let a = g.var(1.0);
-    let b = g.var(2.0);
-    let c = g.var(3.0);
+    let a = g.variable(1.0);
+    let b = g.variable(2.0);
+    let c = g.variable(3.0);
     let ab = a + b;
     let d = ab * c;
 

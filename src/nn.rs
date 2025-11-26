@@ -1,26 +1,26 @@
-use crate::graph::{Var, VarFactory};
+use crate::graph::{Graph, Variable};
 
 pub struct Neuron<'a> {
-    w: Vec<Var<'a>>,
-    b: Var<'a>,
+    w: Vec<Variable<'a>>,
+    b: Variable<'a>,
     nonlin: bool,
 }
 
 impl<'a> Neuron<'a> {
-    pub fn new(g: impl VarFactory<'a>, nin: i16, nonlin: bool) -> Self {
+    pub fn new(g: &'a Graph, nin: i16, nonlin: bool) -> Self {
         // He initialization: scale = sqrt(2 / fan_in)
         let scale = (2.0 / nin as f64).sqrt();
         let w = (0..nin)
-            .map(|_| g.var((rand::random::<f64>() * 2. - 1.) * scale))
+            .map(|_| g.variable((rand::random::<f64>() * 2. - 1.) * scale))
             .collect();
         Self {
             w,
-            b: g.var(0.0),
+            b: g.variable(0.0),
             nonlin,
         }
     }
 
-    pub fn forward(&self, x: &[Var<'a>]) -> Var<'a> {
+    pub fn forward(&self, x: &[Variable<'a>]) -> Variable<'a> {
         let mut s = self.b;
         for (&wi, &xi) in self.w.iter().zip(x) {
             s = s + wi * xi;
@@ -31,7 +31,7 @@ impl<'a> Neuron<'a> {
         s
     }
 
-    pub fn parameters(&self) -> Vec<Var<'a>> {
+    pub fn parameters(&self) -> Vec<Variable<'a>> {
         let mut params = self.w.clone();
         params.push(self.b);
         params
@@ -43,16 +43,16 @@ pub struct Layer<'a> {
 }
 
 impl<'a> Layer<'a> {
-    pub fn new(g: impl VarFactory<'a> + Copy, nin: i16, nout: i16, nonlin: bool) -> Self {
+    pub fn new(g: &'a Graph, nin: i16, nout: i16, nonlin: bool) -> Self {
         let neurons = (0..nout).map(|_| Neuron::new(g, nin, nonlin)).collect();
         Self { neurons }
     }
 
-    pub fn forward(&self, x: &[Var<'a>]) -> Vec<Var<'a>> {
+    pub fn forward(&self, x: &[Variable<'a>]) -> Vec<Variable<'a>> {
         self.neurons.iter().map(|n| n.forward(x)).collect()
     }
 
-    pub fn parameters(&self) -> Vec<Var<'a>> {
+    pub fn parameters(&self) -> Vec<Variable<'a>> {
         self.neurons.iter().flat_map(|n| n.parameters()).collect()
     }
 }
@@ -62,7 +62,7 @@ pub struct MLP<'a> {
 }
 
 impl<'a> MLP<'a> {
-    pub fn new(g: impl VarFactory<'a> + Copy, nin: i16, nouts: Vec<i16>) -> Self {
+    pub fn new(g: &'a Graph, nin: i16, nouts: Vec<i16>) -> Self {
         let n = nouts.len();
         let mut layers = Vec::new();
 
@@ -76,7 +76,7 @@ impl<'a> MLP<'a> {
         Self { layers }
     }
 
-    pub fn forward(&self, x: &[Var<'a>]) -> Vec<Var<'a>> {
+    pub fn forward(&self, x: &[Variable<'a>]) -> Vec<Variable<'a>> {
         let mut out = x.to_vec();
         for layer in self.layers.iter() {
             out = layer.forward(&out);
@@ -84,7 +84,7 @@ impl<'a> MLP<'a> {
         out
     }
 
-    pub fn parameters(&self) -> Vec<Var<'a>> {
+    pub fn parameters(&self) -> Vec<Variable<'a>> {
         self.layers.iter().flat_map(|l| l.parameters()).collect()
     }
 }
