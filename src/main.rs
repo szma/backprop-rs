@@ -1,8 +1,5 @@
 #![allow(dead_code)]
 
-use backprop_rs::engine::Context;
-use backprop_rs::syntax::Graph;
-
 #[cfg(test)]
 mod tests;
 
@@ -16,6 +13,7 @@ fn main() {
 
 /// Graph API: Ergonomic syntax with operator overloading
 fn xor_graph_api() {
+    use backprop_rs::syntax::Graph;
     let xs: Vec<[f64; 2]> = vec![[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]];
     let ys: Vec<f64> = vec![0.0, 1.0, 1.0, 0.0];
 
@@ -61,6 +59,7 @@ fn xor_graph_api() {
 
 /// Raw Arena API: Direct access to Context with explicit operations
 fn xor_raw_api() {
+    use backprop_rs::engine::Context;
     use backprop_rs::nn_raw::MLP;
 
     let xs: Vec<[f64; 2]> = vec![[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]];
