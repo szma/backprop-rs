@@ -60,6 +60,10 @@ impl Context {
         self.vars.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.vars.is_empty()
+    }
+
     pub fn truncate(&mut self, len: usize) {
         self.vars.truncate(len);
     }

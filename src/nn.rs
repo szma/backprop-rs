@@ -2,7 +2,6 @@ use crate::engine::Context;
 
 use crate::engine::VariableIdx;
 
-
 pub struct Neuron {
     w: Vec<VariableIdx>,
     b: VariableIdx,
@@ -10,7 +9,6 @@ pub struct Neuron {
 }
 
 impl Neuron {
-
     pub fn new(ctx: &mut Context, nin: i16, nonlin: bool) -> Self {
         let mut w = Vec::new();
         // He-Initialisierung: scale = sqrt(2 / fan_in)
@@ -18,10 +16,14 @@ impl Neuron {
         for _ in 0..nin {
             w.push(ctx.var((rand::random::<f64>() * 2. - 1.) * scale));
         }
-        Self { w, b: ctx.var(0.0), nonlin }
+        Self {
+            w,
+            b: ctx.var(0.0),
+            nonlin,
+        }
     }
-    
-    pub fn forward(&self, ctx: &mut Context, x: &[VariableIdx]) -> VariableIdx{
+
+    pub fn forward(&self, ctx: &mut Context, x: &[VariableIdx]) -> VariableIdx {
         let mut s = self.b;
         for (wi, xi) in self.w.iter().zip(x) {
             let prod = ctx.mul(*wi, *xi);
@@ -74,21 +76,21 @@ impl Layer {
 }
 
 pub struct MLP {
-    layers: Vec<Layer>
+    layers: Vec<Layer>,
 }
 
 impl MLP {
     pub fn new(ctx: &mut Context, nin: i16, nouts: Vec<i16>) -> Self {
         let mut layers = Vec::new();
         let n = nouts.len();
-        
+
         layers.push(Layer::new(ctx, nin, nouts[0], n > 1)); // nonlin if not last
-        
+
         for i in 1..n {
             let is_last = i == n - 1;
-            layers.push(Layer::new(ctx, nouts[i-1], nouts[i], !is_last));
+            layers.push(Layer::new(ctx, nouts[i - 1], nouts[i], !is_last));
         }
-        
+
         Self { layers }
     }
 
