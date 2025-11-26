@@ -4,55 +4,51 @@ A minimal autograd engine in Rust, inspired by [Karpathy's micrograd](https://gi
 
 ## Architecture
 
-Uses the **Arena pattern** to manage the computation graph. All variables are stored in a central `Context`, and operations return indices (`VariableIdx`) instead of owned values. This avoids Rust's ownership complexity with graph structures (no `Rc<RefCell<...>>` needed). Adds some syntactic sugar on top of it, see below.
+Uses the **Arena pattern** for the computation graph. Variables live in a central `Context`, operations return indices. Avoids Rust's ownership complexity (no `Rc<RefCell<...>>`).
 
 ## Usage
 
-### Scoped API
-
-Uses the **Scoped API pattern** (like `std::thread::scope`) to hide context management:
+### Graph API (ergonomic)
 
 ```rust
-use backprop_rs::syntax::graph;
+use backprop_rs::syntax::Graph;
 
-graph(|var| {
-    let a = var(3.0);
-    let b = var(2.0);
+let g = Graph::new();
+let mlp = g.mlp(2, vec![8, 8, 1]);  // 2 inputs -> 8 -> 8 -> 1 output
 
-    let c = (a * a + b).relu();  // c = relu(a² + b)
+let inputs = [g.var(1.0), g.var(0.0)];
+let pred = mlp.forward(&inputs);
 
-    c.backprop();
+let target = g.var(1.0);
+let loss = (pred[0] - target) * (pred[0] - target);  // MSE
 
-    assert_eq!(a.grad(), Some(6.0));  // dc/da = 2a = 6
-});
+loss.backprop();
 ```
 
-### Direct Arena Syntax
-
-For a better insight on what's going on, use the arena directly:
+### Raw Arena API (explicit)
 
 ```rust
 use backprop_rs::engine::Context;
+use backprop_rs::nn_raw::MLP;
 
 let mut ctx = Context::new();
+let mlp = MLP::new(&mut ctx, 2, vec![8, 8, 1]);
 
-let a = ctx.var(3.0);
-let b = ctx.var(2.0);
+let x0 = ctx.var(1.0);
+let x1 = ctx.var(0.0);
+let pred = mlp.forward(&mut ctx, &[x0, x1]);
 
-let a_sq = ctx.mul(a, a);
-let c = ctx.add(a_sq, b);  // c = a² + b
+let target = ctx.var(1.0);
+let diff = ctx.sub(pred[0], target);
+let loss = ctx.mul(diff, diff);
 
-ctx.backprop(c);
-
-assert_eq!(ctx.grad(a), Some(6.0));  // dc/da = 2a = 6
-assert_eq!(ctx.grad(b), Some(1.0));  // dc/db = 1
+ctx.backprop(loss);
 ```
 
-Both APIs map to the same underlying arena.
+Both APIs use the same underlying arena.
 
 ## Supported Operations
 
-- `+`, `-`, `*`, `/` (via operator overloading in scoped API)
-- `pow`, `relu`, `neg`
+`+`, `-`, `*`, `/`, `pow`, `relu`, `neg`
 
-Run tests with `cargo test`.
+Run `cargo run` to see XOR training with both APIs.
