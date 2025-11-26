@@ -1,4 +1,4 @@
-use crate::syntax::{Var, VarFactory};
+use crate::graph::{Var, VarFactory};
 
 pub struct Neuron<'a> {
     w: Vec<Var<'a>>,
