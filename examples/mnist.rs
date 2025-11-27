@@ -23,7 +23,11 @@ fn mnist() {
     )
     .expect("Failed to load MNIST test data");
 
-    println!("Loaded {} training, {} test images", train.len(), test.len());
+    println!(
+        "Loaded {} training, {} test images",
+        train.len(),
+        test.len()
+    );
 
     let g = Graph::new();
     let mlp = g.mlp(784, vec![16, 10]);
@@ -67,12 +71,16 @@ fn mnist() {
             }
 
             total_loss += batch_loss.data();
-            batch_loss.backprop();
+            batch_loss.backward();
 
             if batch_start % 32 == 0 {
-                println!("Epoch {} - Batch_start: {}: Loss = {:.4}", epoch, batch_start, batch_loss.data());
+                println!(
+                    "Epoch {} - Batch_start: {}: Loss = {:.4}",
+                    epoch,
+                    batch_start,
+                    batch_loss.data()
+                );
             }
-
 
             // SGD update
             for &p in &params {

@@ -9,7 +9,7 @@ fn test_add() {
 
     assert_eq!(c.data(), 5.0);
 
-    c.backprop();
+    c.backward();
     assert_eq!(a.grad().unwrap(), 1.0);
     assert_eq!(b.grad().unwrap(), 1.0);
 }
@@ -23,7 +23,7 @@ fn test_mul() {
 
     assert_eq!(c.data(), 6.0);
 
-    c.backprop();
+    c.backward();
     assert_eq!(a.grad().unwrap(), 3.0); // dc/da = b
     assert_eq!(b.grad().unwrap(), 2.0); // dc/db = a
 }
@@ -36,7 +36,7 @@ fn test_pow() {
 
     assert_eq!(b.data(), 8.0);
 
-    b.backprop();
+    b.backward();
     assert_eq!(a.grad().unwrap(), 12.0); // 3 * 2^2 = 12
 }
 
@@ -48,7 +48,7 @@ fn test_relu_positive() {
 
     assert_eq!(b.data(), 2.0);
 
-    b.backprop();
+    b.backward();
     assert_eq!(a.grad().unwrap(), 1.0);
 }
 
@@ -60,7 +60,7 @@ fn test_relu_negative() {
 
     assert_eq!(b.data(), 0.0);
 
-    b.backprop();
+    b.backward();
     assert_eq!(a.grad().unwrap(), 0.0);
 }
 
@@ -73,7 +73,7 @@ fn test_sub() {
 
     assert_eq!(c.data(), 2.0);
 
-    c.backprop();
+    c.backward();
     assert_eq!(a.grad().unwrap(), 1.0);
     assert_eq!(b.grad().unwrap(), -1.0);
 }
@@ -87,7 +87,7 @@ fn test_div() {
 
     assert_eq!(c.data(), 3.0);
 
-    c.backprop();
+    c.backward();
     assert_eq!(a.grad().unwrap(), 0.5); // dc/da = 1/b = 0.5
     assert_eq!(b.grad().unwrap(), -1.5); // dc/db = -a/b^2 = -6/4 = -1.5
 }
@@ -102,7 +102,7 @@ fn test_variable_reuse() {
 
     assert_eq!(b.data(), 12.0);
 
-    b.backprop();
+    b.backward();
     assert_eq!(a.grad().unwrap(), 7.0); // 2*3 + 1 = 7
 }
 
@@ -118,7 +118,7 @@ fn test_chain() {
 
     assert_eq!(d.data(), 9.0);
 
-    d.backprop();
+    d.backward();
     assert_eq!(a.grad().unwrap(), 3.0); // c
     assert_eq!(b.grad().unwrap(), 3.0); // c
     assert_eq!(c.grad().unwrap(), 3.0); // a + b

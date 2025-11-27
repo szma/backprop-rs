@@ -24,11 +24,11 @@ fn xor() {
             let pred = mlp.forward(&inputs);
             let y_target = g.variable(target);
 
-            let loss = (pred[0]- y_target).pow(2.);
+            let loss = (pred[0] - y_target).pow(2.);
             total_loss = total_loss + loss;
         }
 
-        total_loss.backprop();
+        total_loss.backward();
 
         for &p in &params {
             let grad = p.grad().unwrap_or(0.0);

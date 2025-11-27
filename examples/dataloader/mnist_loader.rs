@@ -3,8 +3,8 @@ use std::io::{BufReader, Read};
 use std::path::Path;
 
 pub struct MnistData {
-    pub images: Vec<Vec<f64>>,  // each image is 784 floats (0.0-1.0)
-    pub labels: Vec<u8>,         // 0-9
+    pub images: Vec<Vec<f64>>, // each image is 784 floats (0.0-1.0)
+    pub labels: Vec<u8>,       // 0-9
 }
 
 impl MnistData {

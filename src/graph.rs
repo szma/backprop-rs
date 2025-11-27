@@ -20,7 +20,12 @@ impl Graph {
     }
 
     pub fn variable(&self, data: f64) -> Variable<'_> {
-        Variable::new(self, data)
+        let mut vars = self.vars.borrow_mut();
+        vars.push(VariableData::new(data));
+        Variable {
+            idx: vars.len() - 1,
+            graph: self,
+        }
     }
 
     pub fn zero_grad(&self) {
@@ -141,28 +146,26 @@ impl Graph {
         self.mul_op(a, b_inv)
     }
 
-    fn add_grad(&self, idx: VariableDataIdx, delta: f64) {
+    fn backward_single(&self, a: VariableDataIdx) {
         let mut vars = self.vars.borrow_mut();
-        let grad = &mut vars[idx].grad;
-        *grad = Some(grad.unwrap_or(0.0) + delta);
-    }
 
-    fn backward(&self, a: VariableDataIdx) {
-        let vars = self.vars.borrow();
-        let var = &vars[a];
-        let children_data: Vec<f64> = var.children.iter().map(|&c| vars[c].data).collect();
-        let grads = var
-            .op
-            .backward(&children_data, var.data, var.grad.unwrap_or(0.0));
-        let children = var.children.clone();
-        drop(vars);
+        // calc grads depending on op type
+        let children_data: Vec<f64> = vars[a].children.iter().map(|&c| vars[c].data).collect();
+        let grads = vars[a].op.backward(
+            &children_data,
+            vars[a].data,
+            vars[a].grad.unwrap_or_default(),
+        );
 
-        for (child, grad) in children.iter().zip(grads) {
-            self.add_grad(*child, grad);
+        // accumulate grads
+        for (i, grad) in grads.iter().enumerate() {
+            let child = vars[a].children[i];
+            // initialized child's grad to 0.0 if None and increase by grad
+            *vars[child].grad.get_or_insert_default() += grad;
         }
     }
 
-    fn backprop(&self, a: VariableDataIdx) {
+    fn backward(&self, a: VariableDataIdx) {
         let mut topo = Vec::new();
         let mut visited = HashSet::new();
 
@@ -185,7 +188,7 @@ impl Graph {
         self.vars.borrow_mut()[a].grad = Some(1.0);
 
         for v in topo.iter().rev() {
-            self.backward(*v);
+            self.backward_single(*v);
         }
     }
 }
@@ -203,17 +206,12 @@ pub struct Variable<'a> {
 }
 
 impl<'a> Variable<'a> {
-    fn new(graph: &'a Graph, data: f64) -> Self {
-        let mut vars = graph.vars.borrow_mut();
-        vars.push(VariableData::new(data));
-        Variable {
-            idx: vars.len() - 1,
-            graph,
-        }
+    fn new(idx: VariableDataIdx, graph: &'a Graph) -> Self {
+        Variable { idx, graph }
     }
 
-    pub fn backprop(self) {
-        self.graph.backprop(self.idx);
+    pub fn backward(self) {
+        self.graph.backward(self.idx);
     }
 
     pub fn data(self) -> f64 {
@@ -234,34 +232,22 @@ impl<'a> Variable<'a> {
 
     pub fn pow(self, exp: f64) -> Self {
         let idx = self.graph.pow_op(self.idx, exp);
-        Variable {
-            idx,
-            graph: self.graph,
-        }
+        Variable::new(idx, self.graph)
     }
 
     pub fn relu(self) -> Self {
         let idx = self.graph.relu_op(self.idx);
-        Variable {
-            idx,
-            graph: self.graph,
-        }
+        Variable::new(idx, self.graph)
     }
 
     pub fn exp(self) -> Self {
         let idx = self.graph.exp_op(self.idx);
-        Variable {
-            idx,
-            graph: self.graph,
-        }
+        Variable::new(idx, self.graph)
     }
 
     pub fn log(self) -> Self {
         let idx = self.graph.log_op(self.idx);
-        Variable {
-            idx,
-            graph: self.graph,
-        }
+        Variable::new(idx, self.graph)
     }
 }
 
@@ -269,10 +255,7 @@ impl<'a> Add for Variable<'a> {
     type Output = Variable<'a>;
     fn add(self, rhs: Self) -> Self {
         let idx = self.graph.add_op(self.idx, rhs.idx);
-        Variable {
-            idx,
-            graph: self.graph,
-        }
+        Variable::new(idx, self.graph)
     }
 }
 
@@ -280,10 +263,7 @@ impl<'a> Sub for Variable<'a> {
     type Output = Variable<'a>;
     fn sub(self, rhs: Self) -> Self {
         let idx = self.graph.sub_op(self.idx, rhs.idx);
-        Variable {
-            idx,
-            graph: self.graph,
-        }
+        Variable::new(idx, self.graph)
     }
 }
 
@@ -291,10 +271,7 @@ impl<'a> Mul for Variable<'a> {
     type Output = Variable<'a>;
     fn mul(self, rhs: Self) -> Self {
         let idx = self.graph.mul_op(self.idx, rhs.idx);
-        Variable {
-            idx,
-            graph: self.graph,
-        }
+        Variable::new(idx, self.graph)
     }
 }
 
@@ -302,10 +279,7 @@ impl<'a> Div for Variable<'a> {
     type Output = Variable<'a>;
     fn div(self, rhs: Self) -> Self {
         let idx = self.graph.div_op(self.idx, rhs.idx);
-        Variable {
-            idx,
-            graph: self.graph,
-        }
+        Variable::new(idx, self.graph)
     }
 }
 
@@ -314,10 +288,7 @@ impl<'a> Neg for Variable<'a> {
 
     fn neg(self) -> Self::Output {
         let idx = self.graph.neg_op(self.idx);
-        Variable {
-            idx,
-            graph: self.graph,
-        }
+        Variable::new(idx, self.graph)
     }
 }
 
