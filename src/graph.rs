@@ -24,11 +24,9 @@ impl Graph {
     /// Construct a new variable with data
     pub fn variable(&self, data: f64) -> Variable<'_> {
         let mut vars = self.vars.borrow_mut();
+        let idx = vars.len();
         vars.push(VariableData::new(data));
-        Variable {
-            idx: vars.len() - 1,
-            graph: self,
-        }
+        Variable { idx, graph: self }
     }
 
     /// Set all gradients to zero
@@ -96,13 +94,14 @@ impl Graph {
         let mut vars = self.vars.borrow_mut();
         let children_data: Vec<f64> = children.iter().map(|&c| vars[c].data).collect();
         let data = op.forward(&children_data);
+        let idx = vars.len();
         vars.push(VariableData {
             data,
             grad: None,
             children,
             op,
         });
-        vars.len() - 1
+        idx
     }
 
     /// data Getter
