@@ -1,3 +1,5 @@
+#[path = "dataloader/mnist_loader.rs"]
+mod mnist_loader;
 
 fn main() {
     mnist();
@@ -5,19 +7,19 @@ fn main() {
 
 fn mnist() {
     use backprop_rs::graph::Graph;
-    use backprop_rs::mnist::MnistData;
+    use mnist_loader::MnistData;
     use std::path::Path;
 
-    // Load MNIST data - download from http://yann.lecun.com/exdb/mnist/
+    // Load MNIST data
     let train = MnistData::load(
-        Path::new("data/train-images-idx3-ubyte"),
-        Path::new("data/train-labels-idx1-ubyte"),
+        Path::new("examples/data/train-images-idx3-ubyte"),
+        Path::new("examples/data/train-labels-idx1-ubyte"),
     )
     .expect("Failed to load MNIST training data");
 
     let test = MnistData::load(
-        Path::new("data/t10k-images-idx3-ubyte"),
-        Path::new("data/t10k-labels-idx1-ubyte"),
+        Path::new("examples/data/t10k-images-idx3-ubyte"),
+        Path::new("examples/data/t10k-labels-idx1-ubyte"),
     )
     .expect("Failed to load MNIST test data");
 
