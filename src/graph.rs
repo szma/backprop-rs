@@ -7,6 +7,8 @@ use std::{
 
 pub type VariableDataIdx = usize;
 
+/// An Arena that holds all the variable data element in a vector.
+/// The vector is guarded by interior mutability to allow convinience access from the "Variable" structs
 #[derive(Debug)]
 pub struct Graph {
     vars: RefCell<Vec<VariableData>>,
@@ -19,6 +21,7 @@ impl Graph {
         }
     }
 
+    /// Construct a new variable with data
     pub fn variable(&self, data: f64) -> Variable<'_> {
         let mut vars = self.vars.borrow_mut();
         vars.push(VariableData::new(data));
@@ -28,36 +31,45 @@ impl Graph {
         }
     }
 
+    /// Set all gradients to zero
     pub fn zero_grad(&self) {
         for var in self.vars.borrow_mut().iter_mut() {
             var.grad = None;
         }
     }
 
+    /// The number of variables
     pub fn len(&self) -> usize {
         self.vars.borrow().len()
     }
 
+    /// Are there any variables in the graph?
     pub fn is_empty(&self) -> bool {
         self.vars.borrow().is_empty()
     }
 
+    /// Remove all elements from len onwards.
+    /// Useful to reset graph after computation if model is initialized first
     pub fn truncate(&self, len: usize) {
         self.vars.borrow_mut().truncate(len);
     }
 
+    /// Convenience function to create a single neuron
     pub fn neuron(&self, nin: i16, nonlin: bool) -> crate::nn::Neuron<'_> {
         crate::nn::Neuron::new(self, nin, nonlin)
     }
 
+    /// Convenience function to create a layer of neurons
     pub fn layer(&self, nin: i16, nout: i16, nonlin: bool) -> crate::nn::Layer<'_> {
         crate::nn::Layer::new(self, nin, nout, nonlin)
     }
 
+    /// Convenience function to create a MLP
     pub fn mlp(&self, nin: i16, nouts: Vec<i16>) -> crate::nn::MLP<'_> {
         crate::nn::MLP::new(self, nin, nouts)
     }
 
+    /// Compute the softmax from logits
     pub fn softmax<'a>(&'a self, logits: &[Variable<'a>]) -> Vec<Variable<'a>> {
         // Numerically stable softmax: subtract max before exp
         let max_val = logits
@@ -72,12 +84,14 @@ impl Graph {
         exps.iter().map(|&e| e / sum_exp).collect()
     }
 
+    /// Compute the cross entropy
     pub fn cross_entropy<'a>(&'a self, probs: &[Variable<'a>], target: usize) -> Variable<'a> {
         -probs[target].log()
     }
 
     // Internal arena operations
 
+    /// Add a new computation variable, forward path is executed directly
     fn push_var(&self, children: Vec<VariableDataIdx>, op: Op) -> VariableDataIdx {
         let mut vars = self.vars.borrow_mut();
         let children_data: Vec<f64> = children.iter().map(|&c| vars[c].data).collect();
@@ -91,61 +105,75 @@ impl Graph {
         vars.len() - 1
     }
 
+    /// data Getter
     fn data(&self, idx: VariableDataIdx) -> f64 {
         self.vars.borrow()[idx].data
     }
 
+    /// grad Getter
     fn grad(&self, idx: VariableDataIdx) -> Option<f64> {
         self.vars.borrow()[idx].grad
     }
 
+    /// data Setter
     fn set_data(&self, idx: VariableDataIdx, data: f64) {
         self.vars.borrow_mut()[idx].data = data;
     }
 
+    /// Remove grad for single variable
     fn zero_grad_single(&self, idx: VariableDataIdx) {
         self.vars.borrow_mut()[idx].grad = None;
     }
 
+    /// Add add op variable, normally used by Variable
     fn add_op(&self, a: VariableDataIdx, b: VariableDataIdx) -> VariableDataIdx {
         self.push_var(vec![a, b], Op::Add)
     }
 
+    /// Add mul op variable, normally used by Variable
     fn mul_op(&self, a: VariableDataIdx, b: VariableDataIdx) -> VariableDataIdx {
         self.push_var(vec![a, b], Op::Mul)
     }
 
+    /// Add pow op variable, normally used by Variable
     fn pow_op(&self, a: VariableDataIdx, exp: f64) -> VariableDataIdx {
         self.push_var(vec![a], Op::Pow(exp))
     }
 
+    /// Add relu op variable, normally used by Variable
     fn relu_op(&self, a: VariableDataIdx) -> VariableDataIdx {
         self.push_var(vec![a], Op::ReLU)
     }
 
+    /// Add exp op variable, normally used by Variable
     fn exp_op(&self, a: VariableDataIdx) -> VariableDataIdx {
         self.push_var(vec![a], Op::Exp)
     }
 
+    /// Add ln op variable, normally used by Variable
     fn log_op(&self, a: VariableDataIdx) -> VariableDataIdx {
         self.push_var(vec![a], Op::Log)
     }
 
+    /// Add neg op variable, normally used by Variable
     fn neg_op(&self, a: VariableDataIdx) -> VariableDataIdx {
         let minus_one = self.variable(-1.0).idx;
         self.mul_op(a, minus_one)
     }
 
+    /// Add sub op variable (using neg and add), normally used by Variable
     fn sub_op(&self, a: VariableDataIdx, b: VariableDataIdx) -> VariableDataIdx {
         let neg_b = self.neg_op(b);
         self.add_op(a, neg_b)
     }
 
+    /// Add div op variable (using pow and mul), normally used by Variable
     fn div_op(&self, a: VariableDataIdx, b: VariableDataIdx) -> VariableDataIdx {
         let b_inv = self.pow_op(b, -1.0);
         self.mul_op(a, b_inv)
     }
 
+    /// Backpropagate gradients for a single variable to its children
     fn backward_single(&self, a: VariableDataIdx) {
         let mut vars = self.vars.borrow_mut();
 
@@ -165,7 +193,8 @@ impl Graph {
         }
     }
 
-    fn backward(&self, a: VariableDataIdx) {
+    /// Backpropagate gradiants through the graph
+    fn backward(&self, idx: VariableDataIdx) {
         let mut topo = Vec::new();
         let mut visited = HashSet::new();
 
@@ -184,9 +213,10 @@ impl Graph {
             }
         }
 
-        build_topo(a, &mut topo, &mut visited, &self.vars.borrow());
-        self.vars.borrow_mut()[a].grad = Some(1.0);
+        build_topo(idx, &mut topo, &mut visited, &self.vars.borrow());
+        self.vars.borrow_mut()[idx].grad = Some(1.0);
 
+        // c = a + b => topo=vec![a,b,c] => rev() to start from c pushing the grads though the graph
         for v in topo.iter().rev() {
             self.backward_single(*v);
         }
@@ -199,6 +229,8 @@ impl Default for Graph {
     }
 }
 
+/// Convenience Variable on which operations like +, *, /, etc. are defined for a nice API.
+/// Can be cheaply copied, only holds index of data in graph/arena and a reference to the graph
 #[derive(Debug, Copy, Clone)]
 pub struct Variable<'a> {
     idx: VariableDataIdx,
