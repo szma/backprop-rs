@@ -30,9 +30,14 @@ loss.backprop();
 ## Examples
 
 - **XOR**: Classic non-linear problem (`fn xor()`)
+
+```bash
+cargo run --release --example xor
+```
+
 - **MNIST**: Handwritten digit classification with a simple MLP
 
 ```bash
-cd data && ./download.sh            # Download MNIST dataset
-cd .. && cargo run --release        # Train on MNIST (slow!)
+cd exampels/data && ./download.sh                      # Download MNIST dataset
+cd ../.. && cargo run --release --example mnist        # Train on MNIST (slow!)
 ```
