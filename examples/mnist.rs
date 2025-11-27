@@ -1,3 +1,5 @@
+use backprop_rs::optim::stochastic_gradiant_descent;
+
 #[path = "dataloader/mnist_loader.rs"]
 mod mnist_loader;
 
@@ -83,10 +85,7 @@ fn mnist() {
             }
 
             // SGD update
-            for &p in &params {
-                let grad = p.grad().unwrap_or(0.0);
-                p.set_data(p.data() - lr * grad);
-            }
+            stochastic_gradiant_descent(&params, lr);
 
             g.zero_grad();
             g.truncate(checkpoint);

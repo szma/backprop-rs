@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use backprop_rs::optim::stochastic_gradiant_descent;
+
 fn main() {
     xor();
 }
@@ -30,10 +32,7 @@ fn xor() {
 
         total_loss.backward();
 
-        for &p in &params {
-            let grad = p.grad().unwrap_or(0.0);
-            p.set_data(p.data() - lr * grad);
-        }
+        stochastic_gradiant_descent(&params, lr);
 
         if epoch % 100 == 0 {
             println!("Epoch {}: Loss = {:.4}", epoch, total_loss.data());

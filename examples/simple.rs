@@ -7,7 +7,7 @@ fn main() {
     let b = g.variable(2.0);
 
     for _ in 0..15 {
-        let loss = (a - b).pow(2.); // Jedes Mal neu berechnen!
+        let loss = (a - b).pow(2.); 
 
         g.zero_grad();
         loss.backward();
